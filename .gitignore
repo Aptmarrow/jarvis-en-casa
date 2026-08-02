@@ -1,0 +1,54 @@
+# Environments & Secrets
+.env
+.env.local
+*.env
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache & build outputs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & Temporary Media
+*.log
+*.tmp
+*.bin
+*.wav
+*.mp3
+*.webm
+*.mp4
+/data/*.db
+/data/*.sqlite
+/data/*.sqlite3
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo

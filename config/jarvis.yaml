@@ -1,0 +1,71 @@
+# ─── J.A.R.V.I.S. Configuration ───────────────────────────────────────────────
+# Just A Really Versatile Intelligent System
+
+jarvis:
+  name: "Jarvis"
+  version: "0.1.0"
+  language: "es"               # Primary language for responses
+
+# ─── Runtime ──────────────────────────────────────────────────────────────────
+
+runtime:
+  pid_file: "/tmp/jarvis.pid"
+  log_level: "INFO"            # DEBUG, INFO, WARNING, ERROR
+  log_file: null               # null = stdout
+  watchdog_interval: 30        # seconds between health checks
+
+# ─── Core ─────────────────────────────────────────────────────────────────────
+
+core:
+  data_dir: "data"             # Relative to project root
+  plugins_dir: null            # null = auto-detect (jarvis/plugins/)
+
+# ─── Transport ────────────────────────────────────────────────────────────────
+
+transport:
+  cli:
+    enabled: true
+    prompt: "jarvis"
+    history_file: "data/cli_history"
+
+  websocket:
+    enabled: false
+    host: "0.0.0.0"
+    port: 8765
+    tls: false
+    cert_file: null
+    key_file: null
+
+  web_console:
+    enabled: false
+    host: "127.0.0.1"
+    port: 8080
+
+# ─── AI ───────────────────────────────────────────────────────────────────────
+
+ai:
+  provider: "gemini"           # "gemini" | "local" | "openai"
+  model: "gemini-3.5-flash"
+  temperature: 0.7
+  max_tokens: 4096
+  rate_limit:
+    requests_per_minute: 15
+    tokens_per_minute: 1000000
+
+# ─── Voice ────────────────────────────────────────────────────────────────────
+
+voice:
+  enabled: false
+  wake_word: "jarvis"
+  stt_model: "small"           # Whisper model: tiny, base, small, medium, large
+  tts_voice: "es-AR-TomasNeural"
+  confidence_thresholds:
+    high: 0.85                 # Full access
+    medium: 0.60               # Conversation only
+    low: 0.40                  # Below this → ignore
+
+# ─── Scheduler ────────────────────────────────────────────────────────────────
+
+scheduler:
+  enabled: true
+  config_file: "config/schedules.yaml"

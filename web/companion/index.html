@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>J.A.R.V.I.S. — Moto g04 Companion</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0d1117">
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      background-color: #0d1117;
+      color: #c9d1d9;
+      height: 100%;
+      height: 100dvh; /* Mobile Dynamic Viewport Height */
+      width: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header Bar */
+    header {
+      padding: 12px 16px;
+      background: rgba(22, 27, 34, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #00f2fe, #4facfe);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #000;
+      font-size: 16px;
+      box-shadow: 0 0 14px rgba(0, 242, 254, 0.4);
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(90deg, #ffffff, #8b949e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .device-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 242, 254, 0.12);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #00f2fe;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #238636;
+      box-shadow: 0 0 10px #238636;
+    }
+
+    .status-dot.disconnected {
+      background-color: #da3633;
+      box-shadow: 0 0 10px #da3633;
+    }
+
+    /* Tabs Bar */
+    .tab-bar {
+      display: flex;
+      background: #161b22;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: transparent;
+      border: none;
+      color: #8b949e;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: #58a6ff;
+      border-bottom-color: #58a6ff;
+    }
+
+    /* Content Views */
+    .view-content {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .view-content.active {
+      display: flex;
+    }
+
+    /* Chat View Stream */
+    #chatView {
+      padding: 16px;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      animation: fadeIn 0.2s ease-out;
+      word-break: break-word;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #1f6feb, #1158c7);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 14px rgba(31, 111, 235, 0.3);
+    }
+
+    .message.jarvis {
+      align-self: flex-start;
+      background: rgba(33, 38, 45, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e6edf3;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-sender {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+
+    /* Thinking Indicator */
+    .thinking-indicator {
+      display: none;
+      align-self: flex-start;
+      padding: 10px 16px;
+      background: rgba(33, 38, 45, 0.6);
+      border-radius: 16px;
+      font-size: 12px;
+      color: #00f2fe;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .thinking-dots span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #00f2fe;
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.6); opacity: 0.4; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* Dashboard View */
+    #dashView {
+      padding: 16px;
+      gap: 14px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #8b949e;
+      text-transform: uppercase;
+    }
+
+    .card-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f0f6fc;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: #3fb950;
+    }
+
+    /* Mobile Controls Section */
+    .controls-container {
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(22, 27, 34, 0.95);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .mic-button-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mic-button {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #00f2fe, #4facfe);
+      color: #0d1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+    }
+
+    .mic-button:active, .mic-button.recording {
+      transform: scale(0.92);
+      background: linear-gradient(135deg, #f857a6, #ff5858);
+      box-shadow: 0 0 32px rgba(248, 87, 166, 0.6);
+    }
+
+    .mic-icon {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+    }
+
+    .mic-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #8b949e;
+      letter-spacing: 0.5px;
+    }
+
+    /* Input Bar with Integrated Icon Button */
+    .input-bar {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .input-bar input {
+      flex: 1;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 24px;
+      padding: 12px 18px;
+      color: #f0f6fc;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .input-bar input:focus {
+      border-color: #58a6ff;
+    }
+
+    .send-icon-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1f6feb, #1158c7);
+      border: none;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+    }
+
+    .send-icon-button:active {
+      transform: scale(0.95);
+      background: #1158c7;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">J</div>
+      <div class="brand-title">J.A.R.V.I.S.</div>
+    </div>
+    <div class="device-badge">
+      <div id="statusDot" class="status-dot disconnected"></div>
+      <span id="statusText">Moto g04</span>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('chat')">Conversación</button>
+    <button class="tab-btn" onclick="switchTab('dash')">Métricas & Estado</button>
+  </div>
+
+  <!-- Chat View -->
+  <div id="chatView" class="view-content active">
+    <div class="message jarvis">
+      <div class="message-sender">Jarvis</div>
+      ¡Hola Rodrigo! Conectado desde tu <b>Moto g04</b> con máxima prioridad. ¿Qué orden querés ejecutar?
+    </div>
+    <div id="thinkingIndicator" class="thinking-indicator">
+      <div class="thinking-dots"><span></span><span></span><span></span></div>
+      Jarvis procesando...
+    </div>
+  </div>
+
+  <!-- Dashboard Telemetry View -->
+  <div id="dashView" class="view-content">
+    <div class="metrics-grid">
+      <div class="card">
+        <div class="card-title">Batería Moto g04</div>
+        <div class="card-val" id="valMotoBatt">-- %</div>
+        <div class="card-sub" id="valMotoCharging">Detectando...</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Prioridad EventBus</div>
+        <div class="card-val" style="color:#00f2fe">REALTIME</div>
+        <div class="card-sub">Latencia Mínima</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Plugins Cargados</div>
+        <div class="card-val" id="valPlugins">16</div>
+        <div class="card-sub">43 Herramientas</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Seguridad IP</div>
+        <div class="card-val" style="color:#3fb950">192.168.100.3</div>
+        <div class="card-sub">Token Protegido</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Control Bar -->
+  <div class="controls-container">
+    <div class="mic-button-wrapper">
+      <button id="micBtn" class="mic-button">
+        <svg class="mic-icon" viewBox="0 0 24 24">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </button>
+      <div class="mic-label" id="micLabel">Presioná para hablar</div>
+    </div>
+
+    <form class="input-bar" id="textForm">
+      <input type="text" id="textInput" placeholder="Escribí una orden..." autocomplete="off">
+      <button type="submit" class="send-icon-button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

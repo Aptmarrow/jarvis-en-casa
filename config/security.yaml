@@ -1,0 +1,15 @@
+security:
+  enabled: true
+  allowed_ips:
+    - "192.168.100.3"
+    - "127.0.0.1"
+    - "fe80::4024:92ff:fe53:6995"
+    - "2803:9800:9849:7454:4024:92ff:fe53:6995"
+    - "2803:9800:9849:7454:78fa:f1fb:3b83:75ba"
+  auth_token: "jarvis_moto_g04_owner_secret_token_8765"
+  devices:
+    moto_g04:
+      alias: "Moto g04 de Rodrigo"
+      ip: "192.168.100.3"
+      role: "owner"
+      priority: "high"

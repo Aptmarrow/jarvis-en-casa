@@ -1,0 +1,24 @@
+entities:
+  - name: "titan"
+    type: "server"
+    aliases:
+      - "mi servidor"
+      - "el server"
+      - "titan"
+    metadata:
+      ip: "192.168.0.10"
+      ssh_user: "rodrigo"
+  - name: "Epson L3150"
+    type: "printer"
+    aliases:
+      - "la epson"
+      - "impresora"
+      - "la impresora"
+    metadata:
+      cups_name: "EPSON_L3150"
+      default: true
+
+relations:
+  - source: "Epson L3150"
+    type: "conectada_a"
+    target: "titan"

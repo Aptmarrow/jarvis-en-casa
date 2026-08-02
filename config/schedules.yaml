@@ -1,0 +1,32 @@
+# ─── Jarvis Scheduled Tasks ───────────────────────────────────────────────────
+#
+# Format:
+#   name:       Unique task identifier
+#   cron:       Standard 5-field cron expression
+#   tool:       Fully qualified tool name to execute
+#   args:       Arguments to pass to the tool (optional)
+#   on_change:  Action when result differs from last run (optional)
+#               "notify" = send notification
+#   enabled:    Whether the task is active
+
+tasks:
+  # Keep system state cache fresh
+  - name: refresh_system_state
+    cron: "* * * * *"
+    tool: _internal.state.refresh
+    enabled: true
+
+  # Scan local network for new devices
+  - name: network_scan
+    cron: "*/15 * * * *"
+    tool: network.discovery.scan_network
+    on_change: notify
+    enabled: false
+
+  # Backup SQLite database daily at 3 AM
+  - name: backup_database
+    cron: "0 3 * * *"
+    tool: _internal.backup.database
+    args:
+      compress: true
+    enabled: false

@@ -1,0 +1,78 @@
+# ─── Jarvis Permissions ───────────────────────────────────────────────────────
+#
+# Each permission defines how Jarvis handles that action:
+#   auto           → Execute without asking
+#   confirm        → Ask for confirmation (context-dependent)
+#   confirm_always → Always require explicit confirmation
+#   deny           → Never allow
+#
+# Tools declare which permissions they need via @tool(permissions=[...])
+# ALL required permissions must be satisfied before execution.
+
+permissions:
+  # Filesystem
+  filesystem.read: auto
+  filesystem.write: confirm
+  filesystem.delete: confirm_always
+  filesystem.execute: confirm_always
+
+  # Network
+  network.scan: auto
+  network.modify: confirm
+  network.firewall: confirm_always
+
+  # System
+  system.brightness: auto
+  system.volume: auto
+  system.shutdown: confirm_always
+  system.reboot: confirm_always
+  system.services: confirm
+  system.processes.list: auto
+  system.processes.kill: confirm
+
+  # Peripherals
+  printer.use: confirm
+  bluetooth.connect: auto
+  bluetooth.pair: confirm
+
+  # Docker
+  docker.list: auto
+  docker.control: confirm
+  docker.remove: confirm_always
+
+  # Media
+  media.play: auto
+  media.cast: auto
+  media.volume: auto
+
+  # Browser
+  browser.open: auto
+  browser.close: confirm
+
+  # Development
+  development.execute: confirm_always
+  development.install: confirm_always
+  development.sandbox: confirm
+
+# ─── Contextual Rules ────────────────────────────────────────────────────────
+#
+# Override permissions based on system state.
+# Rules are evaluated in order; first match wins.
+
+rules:
+  - name: "Night mode caution"
+    when: "state.night_mode == true"
+    override:
+      media.play: confirm
+      media.volume: confirm
+      system.volume: confirm
+
+  - name: "Low voice confidence"
+    when: "state.user_confidence < 0.7"
+    override:
+      "*": confirm_always
+
+  - name: "No user present"
+    when: "state.user_present == false"
+    override:
+      "*": deny
