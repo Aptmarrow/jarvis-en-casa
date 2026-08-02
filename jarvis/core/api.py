@@ -53,6 +53,7 @@ class JarvisAPI:
         self._knowledge_graph = knowledge_graph
         self._capability_manager = capability_manager
         self._device_registry = device_registry
+        self.voice_pipeline = None
 
     async def publish(self, event: Event) -> None:
         """Publish an event to the event bus."""

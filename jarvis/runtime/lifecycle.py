@@ -156,8 +156,13 @@ class Lifecycle:
         self.watchdog = Watchdog(self._api, self.config.runtime.watchdog_interval)
         await self.watchdog.start()
 
-        # 12. Start Transports (CLI & Secure WebSocket for Moto g04)
+        # 12. Initialize Voice Pipeline & Transports
+        from jarvis.voice.pipeline import VoicePipeline
         from jarvis.transport.websocket import JarvisWebSocketServer
+
+        self.voice_pipeline = VoicePipeline(self._api)
+        await self.voice_pipeline.start()
+        self._api.voice_pipeline = self.voice_pipeline
 
         ws_cfg = self.config.transport.websocket
         self.ws_server = JarvisWebSocketServer(
