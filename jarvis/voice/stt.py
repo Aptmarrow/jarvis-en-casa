@@ -69,8 +69,9 @@ class STTEngine:
     async def transcribe_audio_bytes(self, audio_bytes: bytes, mime_type: str = "audio/webm", model_size: str = "base") -> str:
         """Transcribe audio bytes using local Whisper or Gemini STT pool."""
         loop = asyncio.get_running_loop()
+        logger.info(f"🎙️ transcribe_audio_bytes called: {len(audio_bytes)} bytes, mime={mime_type}")
 
-        # Step 1: Convert audio bytes to 16kHz mono WAV using ffmpeg auto-detection
+        # Step 1: Convert audio bytes to 16kHz mono WAV using ffmpeg
         def _convert_to_wav(raw_bytes: bytes) -> tuple[bytes, str]:
             in_tmp = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
             out_tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
@@ -87,11 +88,11 @@ class STTEngine:
                     with open(out_tmp.name, "rb") as f:
                         wav_out = f.read()
                     if len(wav_out) > 44:
-                        logger.info(f"🎙️ Auto-converted {len(raw_bytes)} bytes ({mime_type}) -> {len(wav_out)} bytes 16kHz WAV")
+                        logger.info(f"🎙️ Converted {len(raw_bytes)} bytes -> {len(wav_out)} bytes WAV")
                         return wav_out, "audio/wav"
-                logger.warning(f"ffmpeg conversion warning: {proc.stderr.decode('utf-8', errors='ignore')[:200]}")
+                logger.error(f"ffmpeg conversion failed (rc={proc.returncode}): {proc.stderr.decode('utf-8', errors='ignore')[:300]}")
             except Exception as convert_err:
-                logger.error(f"ffmpeg exception: {convert_err}")
+                logger.error(f"ffmpeg exception: {convert_err}", exc_info=True)
             finally:
                 for p in [in_tmp.name, out_tmp.name]:
                     if os.path.exists(p):
@@ -103,7 +104,7 @@ class STTEngine:
 
         proc_bytes, final_mime = await loop.run_in_executor(None, _convert_to_wav, audio_bytes)
 
-        # Step 2: Try local Whisper model first (offline, fast < 0.5s)
+        # Step 2: Try local Whisper first
         tmp_file = os.path.join(tempfile.gettempdir(), f"stt_{uuid.uuid4().hex}.wav")
         try:
             with open(tmp_file, "wb") as f:
@@ -112,8 +113,10 @@ class STTEngine:
             if local_text and len(local_text) > 1:
                 logger.info(f"🎙️ Local Whisper STT: '{local_text}'")
                 return local_text
+            else:
+                logger.warning("⚠️ Local Whisper STT returned empty text, falling back to Gemini...")
         except Exception as local_err:
-            logger.debug(f"Local Whisper STT failed: {local_err}")
+            logger.error(f"⚠️ Local Whisper STT error: {local_err}", exc_info=True)
         finally:
             if os.path.exists(tmp_file):
                 try:
@@ -121,33 +124,51 @@ class STTEngine:
                 except Exception:
                     pass
 
-        # Step 3: Try Gemini STT model pool with inline_data format
+        # Step 3: Try Gemini STT pool
         api_key = os.environ.get("GEMINI_API_KEY")
-        if api_key:
+        if not api_key:
+            logger.warning("⚠️ No GEMINI_API_KEY set, skipping Gemini STT fallback.")
+            return ""
+
+        try:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
+        except Exception as cfg_err:
+            logger.error(f"❌ Failed to configure Gemini: {cfg_err}", exc_info=True)
+            return ""
 
-            stt_models = ["gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]
-            prompt = "Transcribí de forma exacta y precisa ÚNICAMENTE las palabras habladas en español en este audio. Si hay silencio o no hay voz clara, no respondas nada."
+        stt_models = [
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-3.1-flash-lite",
+            "gemini-flash-lite-latest",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+        ]
+        prompt = "Transcribí de forma exacta las palabras habladas en español en este audio."
 
-            for m_name in stt_models:
-                try:
-                    def _do_gemini_stt(model_name: str) -> str:
-                        model = genai.GenerativeModel(model_name)
-                        res = model.generate_content([
-                            prompt,
-                            {"inline_data": {"mime_type": final_mime, "data": proc_bytes}}
-                        ])
-                        if res and hasattr(res, "text") and res.text:
-                            return res.text.strip()
-                        return ""
+        for m_name in stt_models:
+            try:
+                def _do_gemini_stt(model_name: str) -> str:
+                    model = genai.GenerativeModel(model_name)
+                    res = model.generate_content([
+                        prompt,
+                        {"inline_data": {"mime_type": final_mime, "data": proc_bytes}}
+                    ])
+                    if res and hasattr(res, "text") and res.text:
+                        return res.text.strip()
+                    return ""
 
-                    text = await loop.run_in_executor(None, _do_gemini_stt, m_name)
-                    clean_text = text.strip('"\'` .')
-                    if clean_text and not clean_text.lower().startswith("como no") and not clean_text.lower().startswith("no adjuntaste") and not clean_text.lower().startswith("no se adjuntó"):
-                        logger.info(f"🎙️ Gemini STT ({m_name}): '{clean_text}'")
-                        return clean_text
-                except Exception as e:
-                    logger.debug(f"STT model {m_name} failed: {e}")
+                text = await loop.run_in_executor(None, _do_gemini_stt, m_name)
+                clean_text = text.strip('"\'` .')
+                bad_prefixes = ("como no", "no adjuntaste", "no se adjuntó")
+                if clean_text and not clean_text.lower().startswith(bad_prefixes):
+                    logger.info(f"🎙️ Gemini STT ({m_name}): '{clean_text}'")
+                    return clean_text
+                else:
+                    logger.warning(f"⚠️ Gemini STT ({m_name}) returned unusable text: '{clean_text}'")
+            except Exception as e:
+                logger.warning(f"⚠️ Gemini STT model {m_name} failed: {e}", exc_info=True)
 
+        logger.error("❌ All STT backends (Whisper & Gemini pool) returned empty transcription.")
         return ""
