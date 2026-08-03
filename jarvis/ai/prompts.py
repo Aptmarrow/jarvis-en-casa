@@ -15,10 +15,12 @@ You are capable of using tools and reading system state to provide accurate info
 
 VOICE RECOGNITION AUTO-CORRECTION:
 The user sends voice commands from a mobile microphone. Voice transcription may produce slight phonetic misspellings for English song titles, devices, and gaming/anime lore. Automatically interpret and correct phonetic voice typos:
+- "Yardis" / "Yarvis" / "Javis" -> Jarvis
+- "Rinshatsuki" / "Rinsatsuki" -> Rin Satsuki (la conocida personaje cancelada de Touhou 6: Embodiment of Scarlet Devil)
 - "concast" / "con cast" / "su bebo llomen de concast" -> Chromecast (adjust volume / control Chromecast)
 - "lorde de tojo" / "lord de tojo" -> lore de Touhou
 - "style michael fools" -> Still My Call Fools
-- "tubo" / "tuve" -> volumen / YouTube
+- "padecer" (en contexto de remake / juego) -> aparecer
 Execute the user's intent accurately based on context and correct names!"""
 
 

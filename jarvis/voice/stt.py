@@ -55,7 +55,12 @@ class STTEngine:
             if self._model:
                 try:
                     loop = asyncio.get_running_loop()
-                    prompt_context = "El usuario habla en español rioplatense pero menciona términos en inglés como Chromecast, Spotify, YouTube, títulos de canciones como Still My Call Fools, y cultura pop/anime/gaming como Touhou, ZUN, lore."
+                    prompt_context = (
+                        "El usuario habla en español rioplatense y se dirige al asistente llamado 'Jarvis'. "
+                        "Menciona nombres propios en inglés (Chromecast, Spotify, YouTube, Still My Call Fools) "
+                        "y cultura de gaming/anime de Touhou Project (Rin Satsuki, Reimu, Marisa, Sakuya, Remilia, ZUN, Touhou 6, Remake, lore). "
+                        "Preserva la ortografía exacta de los nombres propios como Jarvis, Rin Satsuki, Touhou 6 y Chromecast."
+                    )
                     result = await loop.run_in_executor(
                         None, lambda: self._model.transcribe(audio_path, language="es", initial_prompt=prompt_context, fp16=False)
                     )
@@ -146,10 +151,10 @@ class STTEngine:
         ]
         prompt = (
             "Transcribí de forma exacta y literal el audio en español. "
-            "Ten en cuenta que el usuario habla en español pero menciona términos en inglés, "
-            "nombres de dispositivos (Chromecast), títulos de canciones (Still My Call Fools), tecnología (Spotify, YouTube) "
-            "y anime/gaming (Touhou, ZUN, lore). "
-            "Mantené los nombres propios y técnicos en su ortografía exacta en inglés o japonés."
+            "El usuario habla en español y se dirige al asistente llamado 'Jarvis'. "
+            "Menciona nombres propios en inglés (Chromecast, Spotify, YouTube, Still My Call Fools) "
+            "y cultura de gaming/anime de Touhou Project (Rin Satsuki, Reimu, Marisa, ZUN, Touhou 6, Remake, lore). "
+            "Escribí los nombres propios con su ortografía exacta (Jarvis, Rin Satsuki, Touhou 6 Remake, Chromecast)."
         )
 
         for m_name in stt_models:
