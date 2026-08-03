@@ -112,11 +112,9 @@ class AIOrchestrator:
                 if metadata:
                     details = ", ".join(f"{k}: {v}" for k, v in metadata.items())
                     res_str += f"\n  Datos: {details}"
-            else:
-                res_str = f"No encontré información registrada sobre '{query_term}' en el Knowledge Graph."
-
-            await self._save_memory(text, res_str, session_id)
-            return res_str
+                await self._save_memory(text, res_str, session_id)
+                return res_str
+            # If entity is not found in KnowledgeGraph, fall through to LLM Orchestration Path below
 
         # ─── Fast Path 3: Greetings & Casual Chat ──────────────────────
         clean_lower = text.strip().lower()

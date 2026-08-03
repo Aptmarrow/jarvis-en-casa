@@ -431,8 +431,8 @@ class JarvisWebSocketServer:
                 except Exception as e:
                     logger.debug(f"Error broadcasting event to WS: {e}")
 
-    async def _generate_neural_audio_b64(self, text: str, voice: str = "es-AR-TomasNeural") -> str:
-        """Synthesize neural MP3 audio encoded in base64 using edge-tts."""
+    async def _generate_neural_audio_b64(self, text: str, voice: str = "es-ES-AlvaroNeural") -> str:
+        """Synthesize neural MP3 audio encoded in base64 using edge-tts with deep butler pitch."""
         try:
             import edge_tts, base64, tempfile, os
             clean = text.replace("*", "").replace("#", "").replace("`", "").replace("~", "").strip()
@@ -442,7 +442,8 @@ class JarvisWebSocketServer:
             tmp_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
             tmp_mp3.close()
 
-            comm = edge_tts.Communicate(clean[:600], voice)
+            # Deep, sophisticated Marvel Jarvis pitch & prosody
+            comm = edge_tts.Communicate(clean[:600], voice, pitch="-4Hz", rate="-2%")
             await comm.save(tmp_mp3.name)
 
             if os.path.exists(tmp_mp3.name):
