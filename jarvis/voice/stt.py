@@ -43,8 +43,8 @@ class STTEngine:
                 logger.error(f"Failed to load Whisper model '{model_size}': {e}")
                 self._model = None
 
-    async def transcribe_audio_file(self, audio_path: str, model_size: str = "base") -> str:
-        """Transcribe an audio file to text."""
+    async def transcribe_audio_file(self, audio_path: str, model_size: str = "small") -> str:
+        """Transcribe an audio file to text with bilingual vocabulary support."""
         if not os.path.exists(audio_path):
             logger.error(f"Audio file not found: {audio_path}")
             return ""
@@ -55,8 +55,9 @@ class STTEngine:
             if self._model:
                 try:
                     loop = asyncio.get_running_loop()
+                    prompt_context = "El usuario habla en español rioplatense pero menciona términos en inglés como Chromecast, Spotify, YouTube, títulos de canciones como Still My Call Fools, y cultura pop/anime/gaming como Touhou, ZUN, lore."
                     result = await loop.run_in_executor(
-                        None, lambda: self._model.transcribe(audio_path, language="es", fp16=False)
+                        None, lambda: self._model.transcribe(audio_path, language="es", initial_prompt=prompt_context, fp16=False)
                     )
                     text = result.get("text", "").strip() if isinstance(result, dict) else ""
                     if text:
@@ -66,7 +67,7 @@ class STTEngine:
 
         return ""
 
-    async def transcribe_audio_bytes(self, audio_bytes: bytes, mime_type: str = "audio/webm", model_size: str = "base") -> str:
+    async def transcribe_audio_bytes(self, audio_bytes: bytes, mime_type: str = "audio/webm", model_size: str = "small") -> str:
         """Transcribe audio bytes using local Whisper or Gemini STT pool."""
         loop = asyncio.get_running_loop()
         logger.info(f"🎙️ transcribe_audio_bytes called: {len(audio_bytes)} bytes, mime={mime_type}")
@@ -138,14 +139,18 @@ class STTEngine:
             return ""
 
         stt_models = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
             "gemini-3.1-flash-lite",
             "gemini-flash-lite-latest",
             "gemini-3.5-flash-lite",
             "gemini-3.5-flash",
         ]
-        prompt = "Transcribí de forma exacta las palabras habladas en español en este audio."
+        prompt = (
+            "Transcribí de forma exacta y literal el audio en español. "
+            "Ten en cuenta que el usuario habla en español pero menciona términos en inglés, "
+            "nombres de dispositivos (Chromecast), títulos de canciones (Still My Call Fools), tecnología (Spotify, YouTube) "
+            "y anime/gaming (Touhou, ZUN, lore). "
+            "Mantené los nombres propios y técnicos en su ortografía exacta en inglés o japonés."
+        )
 
         for m_name in stt_models:
             try:
