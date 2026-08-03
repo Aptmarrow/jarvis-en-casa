@@ -299,6 +299,16 @@ class JarvisWebSocketServer:
                 logger.error(f"Error in chat processing for '{text}': {exc}", exc_info=True)
                 response_text = f"⚠️ Error interno: {exc}"
 
+            await self._send_v1_msg(
+                ws,
+                msg_type="ai_response",
+                payload={
+                    "request_text": text,
+                    "response_text": response_text,
+                },
+                msg_id=msg_id,
+            )
+
         elif msg_type == "voice_audio":
             b64_str = payload.get("audio_b64", "") if isinstance(payload, dict) else ""
             if not b64_str:
