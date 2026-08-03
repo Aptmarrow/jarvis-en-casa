@@ -299,12 +299,14 @@ class JarvisWebSocketServer:
                 logger.error(f"Error in chat processing for '{text}': {exc}", exc_info=True)
                 response_text = f"⚠️ Error interno: {exc}"
 
+            audio_b64 = await self._generate_neural_audio_b64(response_text)
             await self._send_v1_msg(
                 ws,
                 msg_type="ai_response",
                 payload={
                     "request_text": text,
                     "response_text": response_text,
+                    "audio_b64": audio_b64,
                 },
                 msg_id=msg_id,
             )
@@ -361,12 +363,14 @@ class JarvisWebSocketServer:
                     logger.error(f"Error processing voice command '{transcription}': {exc}", exc_info=True)
                     response_text = f"⚠️ Error procesando comando de voz: {exc}"
 
+                audio_b64 = await self._generate_neural_audio_b64(response_text)
                 await self._send_v1_msg(
                     ws,
                     msg_type="ai_response",
                     payload={
                         "request_text": f"🎙️ {transcription}",
                         "response_text": response_text,
+                        "audio_b64": audio_b64,
                     },
                     msg_id=msg_id,
                 )
@@ -426,6 +430,32 @@ class JarvisWebSocketServer:
                     await self._send_v1_msg(ws, msg_type="event", payload=payload)
                 except Exception as e:
                     logger.debug(f"Error broadcasting event to WS: {e}")
+
+    async def _generate_neural_audio_b64(self, text: str, voice: str = "es-AR-TomasNeural") -> str:
+        """Synthesize neural MP3 audio encoded in base64 using edge-tts."""
+        try:
+            import edge_tts, base64, tempfile, os
+            clean = text.replace("*", "").replace("#", "").replace("`", "").replace("~", "").strip()
+            if not clean:
+                return ""
+
+            tmp_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+            tmp_mp3.close()
+
+            comm = edge_tts.Communicate(clean[:600], voice)
+            await comm.save(tmp_mp3.name)
+
+            if os.path.exists(tmp_mp3.name):
+                with open(tmp_mp3.name, "rb") as f:
+                    b64_data = base64.b64encode(f.read()).decode("utf-8")
+                try:
+                    os.remove(tmp_mp3.name)
+                except Exception:
+                    pass
+                return f"data:audio/mp3;base64,{b64_data}"
+        except Exception as e:
+            logger.warning(f"Neural TTS generation skipped: {e}")
+        return ""
 
     async def _index_handler(self, request: web.Request) -> web.FileResponse | web.Response:
         """Serve Moto g04 Web Companion HTML."""

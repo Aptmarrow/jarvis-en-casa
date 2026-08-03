@@ -111,7 +111,19 @@ function handleProtoV1Message(msg) {
     }
 
     appendMessage("jarvis", payload.response_text || "Procesado.");
-    speakResponse(payload.response_text || "");
+
+    // Play high quality Neural Audio (Tomas / Jarvis) if sent from server
+    if (payload.audio_b64) {
+      try {
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        const audio = new Audio(payload.audio_b64);
+        audio.play().catch(() => speakResponse(payload.response_text || ""));
+      } catch (e) {
+        speakResponse(payload.response_text || "");
+      }
+    } else {
+      speakResponse(payload.response_text || "");
+    }
   } else if (msgType === "welcome") {
     console.log("Server Welcome Payload:", payload);
   } else if (msgType === "heartbeat_ack") {
@@ -330,13 +342,29 @@ async function fetchTelemetry() {
   }
 }
 
-// TTS Speech Synthesis Fallback
+// TTS Speech Synthesis Fallback (Male voice selection)
 function speakResponse(text) {
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "es-AR";
     utterance.rate = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const maleVoice = voices.find(
+      (v) =>
+        v.lang.startsWith("es") &&
+        (v.name.includes("Male") ||
+          v.name.includes("Masculino") ||
+          v.name.includes("Jorge") ||
+          v.name.includes("Tomas") ||
+          v.name.includes("Alvaro") ||
+          v.name.includes("Pablo") ||
+          v.name.includes("Carlos") ||
+          v.name.includes("Diego"))
+    ) || voices.find((v) => v.lang.startsWith("es"));
+
+    if (maleVoice) utterance.voice = maleVoice;
     window.speechSynthesis.speak(utterance);
   }
 }
