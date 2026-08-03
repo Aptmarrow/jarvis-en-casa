@@ -432,13 +432,64 @@ class JarvisWebSocketServer:
                     logger.debug(f"Error broadcasting event to WS: {e}")
 
     async def _generate_neural_audio_b64(self, text: str, voice: str = "es-ES-AlvaroNeural") -> str:
-        """Synthesize complete neural MP3 audio encoded in base64 without truncation."""
+        """Synthesize complete neural MP3/WAV audio encoded in base64 using Kokoro ONNX or Edge-TTS."""
         try:
-            import edge_tts, base64, tempfile, os, subprocess, re
+            import base64, tempfile, os, subprocess, re
             clean = text.replace("*", "").replace("#", "").replace("`", "").replace("~", "").strip()
             if not clean:
                 return ""
 
+            # Try Kokoro ONNX local neural voice first
+            onnx_path = self._project_root / "data" / "models" / "kokoro" / "kokoro-v1.0.onnx"
+            voices_path = self._project_root / "data" / "models" / "kokoro" / "voices-v1.0.bin"
+
+            if onnx_path.exists() and voices_path.exists():
+                try:
+                    from kokoro_onnx import Kokoro
+                    import soundfile as sf, numpy as np
+
+                    def _kokoro_gen():
+                        kokoro = Kokoro(str(onnx_path), str(voices_path))
+                        sentences = re.split(r'(?<=[.!?])\s+', clean) or [clean]
+                        audio_chunks = []
+                        sample_rate = 24000
+                        for s in sentences:
+                            if not s.strip():
+                                continue
+                            samples, sample_rate = kokoro.create(s, voice="em_alex", speed=1.05, lang="es")
+                            audio_chunks.append(samples)
+                        if audio_chunks:
+                            full_audio = np.concatenate(audio_chunks)
+                            tmp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                            sf.write(tmp_wav.name, full_audio, sample_rate)
+                            return tmp_wav.name
+                        return ""
+
+                    loop = asyncio.get_running_loop()
+                    wav_file = await loop.run_in_executor(None, _kokoro_gen)
+
+                    if wav_file and os.path.exists(wav_file):
+                        tmp_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+                        tmp_mp3.close()
+                        subprocess.run(["ffmpeg", "-y", "-i", wav_file, "-b:a", "128k", tmp_mp3.name], capture_output=True)
+
+                        target_file = tmp_mp3.name if os.path.exists(tmp_mp3.name) and os.path.getsize(tmp_mp3.name) > 0 else wav_file
+                        with open(target_file, "rb") as f:
+                            b64_data = base64.b64encode(f.read()).decode("utf-8")
+
+                        for p in [wav_file, tmp_mp3.name]:
+                            if os.path.exists(p):
+                                try: os.remove(p)
+                                except Exception: pass
+
+                        if b64_data:
+                            logger.info(f"🎙️ Kokoro ONNX neural voice generated ({len(b64_data)} b64 chars)")
+                            return f"data:audio/mp3;base64,{b64_data}"
+                except Exception as k_err:
+                    logger.warning(f"Kokoro ONNX WebSocket generation fallback: {k_err}")
+
+            # Fallback to Edge-TTS
+            import edge_tts
             MAX_CHUNK = 700
             chunks = []
             if len(clean) <= MAX_CHUNK:

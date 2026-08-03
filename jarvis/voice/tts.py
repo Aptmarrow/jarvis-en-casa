@@ -32,7 +32,7 @@ class TTSEngine:
 
     PLAYERS: ClassVar[list[str]] = ["pw-play", "paplay", "mpv", "ffplay"]
     default_voice: str = "es-ES-AlvaroNeural"  # fallback edge-tts
-    kokoro_voice: str = "ef_dora"  # Kokoro Spanish voice
+    kokoro_voice: str = "em_alex"  # Kokoro Spanish male voice (Alex)
 
     def __init__(self, model_dir: str | Path = "data/models/kokoro") -> None:
         self._kokoro: Kokoro | None = None
