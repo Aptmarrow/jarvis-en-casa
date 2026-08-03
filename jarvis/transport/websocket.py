@@ -432,27 +432,66 @@ class JarvisWebSocketServer:
                     logger.debug(f"Error broadcasting event to WS: {e}")
 
     async def _generate_neural_audio_b64(self, text: str, voice: str = "es-ES-AlvaroNeural") -> str:
-        """Synthesize neural MP3 audio encoded in base64 using edge-tts with deep butler pitch."""
+        """Synthesize complete neural MP3 audio encoded in base64 without truncation."""
         try:
-            import edge_tts, base64, tempfile, os
+            import edge_tts, base64, tempfile, os, subprocess, re
             clean = text.replace("*", "").replace("#", "").replace("`", "").replace("~", "").strip()
             if not clean:
                 return ""
 
-            tmp_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-            tmp_mp3.close()
+            MAX_CHUNK = 700
+            chunks = []
+            if len(clean) <= MAX_CHUNK:
+                chunks = [clean]
+            else:
+                sentences = re.split(r'(?<=[.!?])\s+', clean)
+                current = ""
+                for s in sentences:
+                    if len(current) + len(s) < MAX_CHUNK:
+                        current += (" " if current else "") + s
+                    else:
+                        if current:
+                            chunks.append(current)
+                        current = s
+                if current:
+                    chunks.append(current)
 
-            # Deep, sophisticated Marvel Jarvis pitch & prosody
-            comm = edge_tts.Communicate(clean[:600], voice, pitch="-4Hz", rate="-2%")
-            await comm.save(tmp_mp3.name)
+            tmp_files = []
+            for i, chunk in enumerate(chunks):
+                tmp = tempfile.NamedTemporaryFile(suffix=f"_{i}.mp3", delete=False)
+                tmp.close()
+                comm = edge_tts.Communicate(chunk, voice, pitch="-3Hz", rate="+2%")
+                await comm.save(tmp.name)
+                tmp_files.append(tmp.name)
 
-            if os.path.exists(tmp_mp3.name):
-                with open(tmp_mp3.name, "rb") as f:
-                    b64_data = base64.b64encode(f.read()).decode("utf-8")
+            final_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
+            if len(tmp_files) > 1:
+                list_file = tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w")
+                for f in tmp_files:
+                    list_file.write(f"file '{f}'\n")
+                list_file.close()
+                subprocess.run(
+                    ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_file.name, "-c", "copy", final_mp3],
+                    capture_output=True
+                )
                 try:
-                    os.remove(tmp_mp3.name)
+                    os.remove(list_file.name)
                 except Exception:
                     pass
+            else:
+                final_mp3 = tmp_files[0]
+
+            b64_data = ""
+            if os.path.exists(final_mp3):
+                with open(final_mp3, "rb") as f:
+                    b64_data = base64.b64encode(f.read()).decode("utf-8")
+                for f in tmp_files + [final_mp3]:
+                    if os.path.exists(f):
+                        try:
+                            os.remove(f)
+                        except Exception:
+                            pass
+            if b64_data:
                 return f"data:audio/mp3;base64,{b64_data}"
         except Exception as e:
             logger.warning(f"Neural TTS generation skipped: {e}")
